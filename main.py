@@ -45,7 +45,7 @@ def custom_openapi():
 
     # Add servers for GPT to understand
     openapi_schema["servers"] = [
-        {"url": "https://ai.zelenin.family/hyundai"}
+        {"url": "https://hyundai-api-agent.onrender.com"}
     ]
 
     app.openapi_schema = openapi_schema
