@@ -1,14 +1,54 @@
-from typing import Optional
+from fastapi import FastAPI, Query, Path
+from hyundai_agent import HyundaiOffersAgent
+from fastapi.openapi.utils import get_openapi
 
-from fastapi import FastAPI
+app = FastAPI(root_path="/hyundai")
 
-app = FastAPI()
+@app.get("/offers")
+def get_all_offers(zip: str = Query(...)):
+    agent = HyundaiOffersAgent(zip)
+    return agent.extract_offers()
 
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+@app.get("/offers/with-payment")
+def get_offers_with_payment(
+    zip: str = Query(...),
+    model: str | None = Query(None),
+    maxPrice: float | None = Query(None)
+):
+    agent = HyundaiOffersAgent(zip)
+    return agent.get_available_payment_offers(model=model, max_price=maxPrice)
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Optional[str] = None):
-    return {"item_id": item_id, "q": q}
+@app.get("/offers/{offer_type}")
+def get_filtered(
+    offer_type: str = Path(..., description="Offer type: lease, finance, rebate"),
+    zip: str = Query(...)
+):
+    agent = HyundaiOffersAgent(zip)
+    return agent.get_offers_by_type(offer_type)
+
+@app.get("/models")
+def list_models(zip: str = Query(...)):
+    agent = HyundaiOffersAgent(zip)
+    return agent.get_all_model_names()
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title="Hyundai Offer API",
+        version="1.0.0",
+        description="API to get Hyundai lease/finance/cash offers by ZIP",
+        routes=app.routes,
+    )
+
+    # Add servers for GPT to understand
+    openapi_schema["servers"] = [
+        {"url": "https://ai.zelenin.family/hyundai"}
+    ]
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
